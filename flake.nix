@@ -1,7 +1,11 @@
 {
   inputs = {
     nixpkgs = {
-      url = "github:nixos/nixpkgs/nixos-unstable";
+      url = "github:nixos/nixpkgs/nixos-24.11";
+    };
+
+    nixpkgs-unstable = {
+      url = "github:nixos/nixpkgs/nixpkgs-unstable";
     };
 
     futils = {
@@ -9,16 +13,8 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/master";
+      url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    catppuccin = {
-      url = "github:catppuccin/nix";
-    };
-
-    stylix = {
-      url = "github:danth/stylix";
     };
 
     hyprland = {
@@ -36,9 +32,6 @@
       nixpkgs,
       futils,
       home-manager,
-      stylix,
-      catppuccin,
-      nvim,
       ...
     }@inputs:
     let
@@ -71,7 +64,7 @@
 
       defaultArgs = mkDefaultArgs system;
     in
-    rec {
+    {
       packages = eachDefaultSystemMap (
         system:
         let
@@ -80,20 +73,15 @@
         { home-manager = home-manager.packages.${system}.default; } // (import ./packages defaultArgs)
       );
 
+      overlays = import ./overlays { inherit inputs; };
+
       nixosModules = import ./modules/nixos;
 
       homeManagerModules = import ./modules/home-manager;
 
-      nixosConfigurations =
-        let
-          modules = {
-            # homeManager = lib.attrsets.ates homeManagerModules;
-            nixos = lib.attrsets.attrValues nixosModules;
-          };
-        in
-        (import ./hosts (defaultArgs // { inherit modules; }));
+      # nixosConfigurations = (import ./hosts (defaultArgs));
 
-      homeConfigurations = (import ./homes (defaultArgs));
+      homeConfigurations = (import ./homes { inherit (self) inputs outputs; });
 
       formatter = eachDefaultSystemMap (system: nixpkgs.legacyPackages.${system}.nixpkgs-fmt);
     };
